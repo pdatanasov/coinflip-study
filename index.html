@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Coin Flip Casino Study</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      max-width: 600px;
+    }
+    button {
+      padding: 8px 16px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    input {
+      padding: 5px;
+      width: 80px;
+    }
+    #history {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Coin Flip Casino</h1>
+
+<p>
+You start with $0.50. Each round, you may bet part of your balance on Heads or Tails.
+One of three coins is randomly selected each round. Each coin has a different
+probability of landing Heads (0.55, 0.60, 0.70). Each coin is equally likely.
+</p>
+
+<h3>Balance: $<span id="balance">0.50</span></h3>
+
+<label>Bet Amount: $</label>
+<input type="number" id="bet" step="0.01" min="0.01">
+
+<br><br>
+
+<button id="headsBtn" onclick="play('Heads')">Bet Heads</button>
+<button id="tailsBtn" onclick="play('Tails')">Bet Tails</button>
+
+<div id="history"></div>
+
+<script>
+let balance = 0.50;
+let gameOver = false;
+
+function getRandomBias() {
+  const biases = [0.55, 0.60, 0.70];
+  const index = Math.floor(Math.random() * biases.length);
+  return biases[index];
+}
+
+function flipCoin(bias) {
+  return Math.random() < bias ? "Heads" : "Tails";
+}
+
+function endGame(message) {
+  gameOver = true;
+  document.getElementById("headsBtn").disabled = true;
+  document.getElementById("tailsBtn").disabled = true;
+  document.getElementById("bet").disabled = true;
+  alert(message);
+}
+
+function play(choice) {
+
+  if (gameOver) return;
+
+  const betInput = document.getElementById("bet");
+  const bet = parseFloat(betInput.value);
+
+  if (isNaN(bet) || bet <= 0) {
+    alert("Enter a valid bet amount.");
+    return;
+  }
+
+  if (bet > balance) {
+    alert("You cannot bet more than your current balance.");
+    return;
+  }
+
+  const bias = getRandomBias();
+  const result = flipCoin(bias);
+
+  if (choice === result) {
+    balance += bet;
+  } else {
+    balance -= bet;
+  }
+
+  balance = Math.round(balance * 100) / 100; // avoid floating point drift
+
+  document.getElementById("balance").innerText = balance.toFixed(2);
+
+  const history = document.getElementById("history");
+  const entry = document.createElement("div");
+
+  entry.innerHTML =
+    "Coin bias (P(Heads)) = " + bias +
+    " | You chose: " + choice +
+    " | Result: " + result +
+    " | New Balance: $" + balance.toFixed(2);
+
+  history.prepend(entry);
+
+  // ---- STOPPING RULES ----
+  if (balance <= 0) {
+    endGame("The game is over as your balance reached $0.");
+  }
+
+  if (balance >= 7.5) {
+    endGame("The game is over as your balance reached or exceeded $7.5.");
+  }
+}
+</script>
+
+</body>
+</html>
