@@ -15,8 +15,9 @@ input { padding: 5px; width: 100px; }
 <h2>Coin Flip Casino</h2>
 <p>You start with $0.50. Bet part of your balance each round. The game ends if your balance reaches $0 or $7.50.</p>
 
-<h3>Balance: $<span id="balance">0.50</span></h3>
 <p>Current round probability of Heads: <span id="biasDisplay">-</span></p>
+<h3>Balance: $<span id="balance">0.50</span></h3>
+    
 <label>Bet Amount: $</label>
 <input type="number" id="bet" step="0.01" min="0.01">
 <br><br>
@@ -70,7 +71,10 @@ function getRandomBias() {
 function flipCoin(bias) {
     return Math.random() < bias ? "Heads" : "Tails";
 }
-
+    
+// Display current round probability
+document.getElementById("biasDisplay").innerText = bias.toFixed(2);
+    
 function updateBetLimit() {
     document.getElementById("bet").max = balance.toFixed(2);
 }
