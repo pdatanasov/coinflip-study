@@ -1,190 +1,189 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Coin Flip Study</title>
-<style>
-body { font-family: Arial; margin: 40px; max-width: 650px; }
-button { padding: 8px 16px; margin-top: 10px; }
-input { padding: 5px; width: 100px; }
-#history { margin-top: 20px; max-height: 200px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px; font-size: 14px; }
-</style>
+    <meta charset="UTF-8">
+    <title>Coin Flip Casino</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        #history { margin-top: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+        button { margin-right: 5px; margin-top: 5px; }
+    </style>
 </head>
-
 <body>
-<h2>Coin Flip Casino</h2>
-<p>You start with $0.50. Bet part of your balance each round. The game ends if your balance reaches $0 or $7.50.</p>
+    <h1>Coin Flip Casino</h1>
+    <p>Balance: $<span id="balance">0.50</span></p>
+    <p>Condition: <span id="conditionDisplay"></span></p>
 
-<p>Probability of Heads: <span id="biasDisplay">-</span></p>
-<h3>Balance: $<span id="balance">0.50</span></h3>
-    
-<label>Bet Amount (in cents): </label>
-<input type="number" id="bet" step="1" min="1">
-    
-<br><br>
-<button id="headsBtn" onclick="play('Heads')">Bet Heads</button>
-<button id="tailsBtn" onclick="play('Tails')">Bet Tails</button>
+    <!-- Treatment buttons -->
+    <div id="treatmentButtons" style="display:none;">
+        <button type="button" onclick="quickBet5()">Bet 5 cents</button>
+        <button type="button" onclick="quickBetKelly()">Bet Kelly</button>
+        <br><br>
+    </div>
 
-<div id="history"></div>
+    <!-- Bet input -->
+    <label>Bet Amount (in cents): </label>
+    <input type="number" id="bet" step="1" min="1">
+    <br><br>
 
-<script>
-// ==========================
-// CONFIG
-// ==========================
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwakPA3-8G8mQ-CXUr79PxQgKIXB2FIPHmhOSR-qfU3yioGvRwp9mo8r2RuEFbyhzTC/exec";
+    <!-- Heads/Tails buttons -->
+    <button onclick="play('Heads')">Heads</button>
+    <button onclick="play('Tails')">Tails</button>
 
-// ==========================
-// PARTICIPANT SETUP
-// ==========================
-let userid = localStorage.getItem("userid");
-if (!userid) {
-    userid = crypto.randomUUID();
-    localStorage.setItem("userid", userid);
-}
+    <!-- Display current bias -->
+    <p>Current round probability of Heads: <span id="biasDisplay">-</span></p>
 
-let condition = localStorage.getItem("condition");
-if (!condition) {
-    condition = Math.random() < 0.5 ? "treatment" : "control";
-    localStorage.setItem("condition", condition);
-}
+    <!-- History -->
+    <div id="history"></div>
 
-let balance = parseFloat(localStorage.getItem("balance")) || 0.50;
-let roundNumber = parseInt(localStorage.getItem("roundNumber")) || 0;
-let gameOver = localStorage.getItem("gameOver") === "true";
+    <script>
+        // ==========================
+        // GLOBAL VARIABLES
+        // ==========================
+        let balance = parseFloat(localStorage.getItem("balance")) || 0.50;
+        let roundNumber = parseInt(localStorage.getItem("roundNumber")) || 0;
+        let gameOver = localStorage.getItem("gameOver") === "true";
+        let currentBias = null;
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwakPA3-8G8mQ-CXUr79PxQgKIXB2FIPHmhOSR-qfU3yioGvRwp9mo8r2RuEFbyhzTC/exec"; // <-- Replace with your Apps Script URL
+        const userid = localStorage.getItem("userid") || ("user_" + Math.floor(Math.random()*1000000));
+        localStorage.setItem("userid", userid);
 
-document.getElementById("balance").innerText = balance.toFixed(2);
-if (gameOver) disableInputs();
-updateBetLimit();
+        document.getElementById("balance").innerText = balance.toFixed(2);
 
-// Warn before leaving
-window.onbeforeunload = function() {
-    if (!gameOver) return "Your progress will be saved. Refreshing may disrupt the game.";
-};
+        // ==========================
+        // CONDITION ASSIGNMENT
+        // ==========================
+        let condition = localStorage.getItem("condition");
+        if (!condition) {
+            condition = Math.random() < 0.5 ? "control" : "treatment";
+            localStorage.setItem("condition", condition);
+        }
+        document.getElementById("conditionDisplay").innerText = condition;
 
-// ==========================
-// GAME LOGIC
-// ==========================
-function getRandomBias() {
-    const biases = [0.55, 0.60, 0.70];
-    return biases[Math.floor(Math.random() * biases.length)];
-}
+        // Show treatment buttons only if treatment
+        if (condition === "treatment") {
+            document.getElementById("treatmentButtons").style.display = "block";
+        }
 
-function flipCoin(bias) {
-    return Math.random() < bias ? "Heads" : "Tails";
-}
-    
-function updateBetLimit() {
-    document.getElementById("bet").max = balance.toFixed(2);
-}
+        // ==========================
+        // QUICK BET FUNCTIONS (Treatment)
+        // ==========================
+        function quickBet5() {
+            document.getElementById("bet").value = 5;
+        }
 
-function disableInputs() {
-    document.getElementById("headsBtn").disabled = true;
-    document.getElementById("tailsBtn").disabled = true;
-    document.getElementById("bet").disabled = true;
-}
+        function quickBetKelly() {
+            if (currentBias === null) {
+                alert("Bias for this round is not yet set. Press Heads or Tails to start the round.");
+                return;
+            }
 
-function generateCompletionCode() {
-    return "CF-" + userid.substring(0,8).toUpperCase();
-}
+            // Kelly fraction: f* = 2p - 1
+            let f = 2 * currentBias - 1;
+            if (f < 0) f = 0;
 
-function sendData(data) {
-    fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
-}
+            let betCents = Math.round(f * balance * 100);
+            if (betCents < 1) betCents = 1;
+            if (betCents > balance * 100) betCents = Math.floor(balance * 100);
 
-function play(choice) {
-    if (gameOver) return;
+            document.getElementById("bet").value = betCents;
+        }
 
-    const betInput = document.getElementById("bet");
-    
-    // Convert input from cents to dollars immediately
-    let bet = parseInt(betInput.value);
-    if (isNaN(bet) || bet <= 0) {
-        alert("Invalid bet amount.");
-        return;
-    }
-    bet = bet / 100;  // now bet is in dollars
-    
-    // Now validate against balance
-    if (bet > balance) {
-        alert("Invalid bet amount. Cannot bet more than your current balance.");
-        return;
-    }
+        // ==========================
+        // GAME LOGIC
+        // ==========================
+        function getRandomBias() {
+            const biases = [0.55, 0.60, 0.70];
+            return biases[Math.floor(Math.random() * biases.length)];
+        }
 
-    roundNumber++;
-    const startBalance = balance;
-    const bias = getRandomBias();
- 
-    // Update the display
-    const biasSpan = document.getElementById("biasDisplay");
-    if (biasSpan) {
-        biasSpan.innerText = bias.toFixed(2);
-    }
-    
-    const result = flipCoin(bias);
+        function flipCoin(bias) {
+            return Math.random() < bias ? "Heads" : "Tails";
+        }
 
-    const outcome = (choice === result) ? "win" : "loss";
-    balance = (outcome === "win") ? balance + bet : balance - bet;
-    balance = Math.round(balance * 100)/100;
-    const endBalance = balance;
+        function play(choice) {
+            if (gameOver) return;
 
-    document.getElementById("balance").innerText = balance.toFixed(2);
-    updateBetLimit();
-    betInput.value = "";
+            // Determine bet amount in cents → convert to dollars
+            const betInput = document.getElementById("bet");
+            let bet = parseInt(betInput.value);
+            if (isNaN(bet) || bet <= 0) {
+                alert("Invalid bet amount.");
+                return;
+            }
+            bet = bet / 100; // dollars
 
-    localStorage.setItem("balance", balance);
-    localStorage.setItem("roundNumber", roundNumber);
+            if (bet > balance) {
+                alert("Invalid bet amount. Cannot bet more than your current balance.");
+                return;
+            }
 
-    const timestamp = new Date().toISOString();
+            // Generate bias for this round
+            currentBias = getRandomBias();
+            document.getElementById("biasDisplay").innerText = currentBias.toFixed(2);
 
-    sendData({
-        userid: userid,
-        condition: condition,
-        round_number: roundNumber,
-        timestamp: timestamp,
-        bet_amount: bet,
-        choice: choice,
-        outcome: outcome,
-        probability_heads: bias,
-        endowment_start: startBalance,
-        endowment_end: endBalance
-    });
+            const startBalance = balance;
+            const result = flipCoin(currentBias);
 
-    const entry = document.createElement("div");
-    entry.innerHTML = "Round " + roundNumber + " | " + outcome + " | Balance: $" + endBalance.toFixed(2);
-    document.getElementById("history").prepend(entry);
+            const outcome = (choice === result) ? "win" : "loss";
+            balance = (outcome === "win") ? balance + bet : balance - bet;
+            balance = Math.round(balance * 100) / 100;
+            const endBalance = balance;
 
-    if (balance <= 0) endGame("The game is over as your balance reached $0.");
-    if (balance >= 7.5) endGame("The game is over as your balance reached or exceeded $7.50.");
-}
+            document.getElementById("balance").innerText = balance.toFixed(2);
+            betInput.value = "";
 
-function endGame(message) {
-    gameOver = true;
-    localStorage.setItem("gameOver", "true");
+            roundNumber++;
+            localStorage.setItem("balance", balance);
+            localStorage.setItem("roundNumber", roundNumber);
 
-    disableInputs();
+            const timestamp = new Date().toISOString();
 
-    const completionCode = generateCompletionCode();
-    alert(message + "\n\nYour completion code is:\n" + completionCode);
+            // Send data to backend
+            sendData({
+                userid: userid,
+                condition: condition,
+                round_number: roundNumber,
+                timestamp: timestamp,
+                bet_amount: bet,
+                choice: choice,
+                outcome: outcome,
+                probability_heads: currentBias,
+                endowment_start: startBalance,
+                endowment_end: endBalance
+            });
 
-    sendData({
-        userid: userid,
-        condition: condition,
-        round_number: roundNumber,
-        timestamp: new Date().toISOString(),
-        bet_amount: "NA",
-        choice: "NA",
-        outcome: "completed",
-        probability_heads: "NA",
-        endowment_start: "NA",
-        endowment_end: balance,
-        completion_code: completionCode
-    });
-}
-</script>
+            // Update history
+            const entry = document.createElement("div");
+            entry.innerHTML = "Round " + roundNumber +
+                " | " + outcome +
+                " | Balance: $" + endBalance.toFixed(2) +
+                " | Prob(Heads): " + currentBias.toFixed(2);
+            document.getElementById("history").prepend(entry);
+
+            // Check stopping rules
+            if (balance <= 0) endGame("The game is over as your balance reached $0.");
+            if (balance >= 7.5) endGame("The game is over as your balance reached or exceeded $7.50.");
+        }
+
+        function endGame(msg) {
+            gameOver = true;
+            localStorage.setItem("gameOver", true);
+            alert(msg);
+        }
+
+        // ==========================
+        // BACKEND DATA LOGGING
+        // ==========================
+        function sendData(data) {
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => console.log("Data sent"))
+            .catch(err => console.error("Error sending data:", err));
+        }
+    </script>
 </body>
 </html>
