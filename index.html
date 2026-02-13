@@ -15,7 +15,7 @@ input { padding: 5px; width: 100px; }
 <h2>Coin Flip Casino</h2>
 <p>You start with $0.50. Bet part of your balance each round. The game ends if your balance reaches $0 or $7.50.</p>
 
-<p>Current round probability of Heads: <span id="biasDisplay">-</span></p>
+<p>Probability of Heads: <span id="biasDisplay">-</span></p>
 <h3>Balance: $<span id="balance">0.50</span></h3>
     
 <label>Bet Amount: $</label>
@@ -109,9 +109,12 @@ function play(choice) {
     roundNumber++;
     const startBalance = balance;
     const bias = getRandomBias();
-    
-    // Display current round probability
-    document.getElementById("biasDisplay").innerText = bias.toFixed(2);
+ 
+    // Update the display
+    const biasSpan = document.getElementById("biasDisplay");
+    if (biasSpan) {
+        biasSpan.innerText = bias.toFixed(2);
+    }
     
     const result = flipCoin(bias);
 
