@@ -11,7 +11,10 @@
 </head>
 <body>
     <h1>Coin Flip Casino</h1>
-    <p>Balance: $<span id="balance">0.50</span></p>
+    <p>Balance:             $<span id="balance">0.50</span></p>
+    <!-- Display current bias (shown for both conditions) -->
+    <p>Probability of Heads: <span id="biasDisplay">-</span></p>
+
     <p>Condition: <span id="conditionDisplay"></span></p>
 
     <!-- Treatment buttons -->
@@ -30,8 +33,6 @@
     <button onclick="play('Heads')">Heads</button>
     <button onclick="play('Tails')">Tails</button>
 
-    <!-- Display current bias (shown for both conditions) -->
-    <p>Current round probability of Heads: <span id="biasDisplay">-</span></p>
 
     <!-- History -->
     <div id="history"></div>
