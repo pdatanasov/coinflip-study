@@ -100,11 +100,18 @@ function play(choice) {
     if (gameOver) return;
 
     const betInput = document.getElementById("bet");
-    let bet = parseInt(betInput.value);  // in cents
-    bet = bet / 100;                     // convert to dollars
-
-    if (isNaN(bet) || bet <= 0 || bet > balance) {
+    
+    // Convert input from cents to dollars immediately
+    let bet = parseInt(betInput.value);
+    if (isNaN(bet) || bet <= 0) {
         alert("Invalid bet amount.");
+        return;
+    }
+    bet = bet / 100;  // now bet is in dollars
+    
+    // Now validate against balance
+    if (bet > balance) {
+        alert("Invalid bet amount. Cannot bet more than your current balance.");
         return;
     }
 
