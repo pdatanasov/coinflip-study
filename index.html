@@ -74,7 +74,7 @@
 
         function quickBetKelly() {
             if (currentBias === null) {
-                alert("Bias for this round is not yet set. Press Heads or Tails to start the round.");
+                alert("Bias for this round is not yet set.");
                 return;
             }
 
@@ -101,6 +101,12 @@
             return Math.random() < bias ? "Heads" : "Tails";
         }
 
+        function startRound() {
+            if (gameOver) return;
+            currentBias = getRandomBias();
+            document.getElementById("biasDisplay").innerText = currentBias.toFixed(2);
+        }
+
         function play(choice) {
             if (gameOver) return;
 
@@ -118,14 +124,10 @@
                 return;
             }
 
-            // Generate bias for this round
-            currentBias = getRandomBias();
-            document.getElementById("biasDisplay").innerText = currentBias.toFixed(2);
-
             const startBalance = balance;
             const result = flipCoin(currentBias);
-
             const outcome = (choice === result) ? "win" : "loss";
+
             balance = (outcome === "win") ? balance + bet : balance - bet;
             balance = Math.round(balance * 100) / 100;
             const endBalance = balance;
@@ -162,8 +164,11 @@
             document.getElementById("history").prepend(entry);
 
             // Check stopping rules
-            if (balance <= 0) endGame("The game is over as your balance reached $0.");
-            if (balance >= 7.5) endGame("The game is over as your balance reached or exceeded $7.50.");
+            if (balance <= 0) { endGame("The game is over as your balance reached $0."); return; }
+            if (balance >= 7.5) { endGame("The game is over as your balance reached or exceeded $7.50."); return; }
+
+            // Start next round
+            startRound();
         }
 
         function endGame(msg) {
@@ -184,6 +189,11 @@
             .then(response => console.log("Data sent"))
             .catch(err => console.error("Error sending data:", err));
         }
+
+        // ==========================
+        // INITIALIZE FIRST ROUND
+        // ==========================
+        startRound();
     </script>
 </body>
 </html>
