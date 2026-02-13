@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Coin Flip Study</title>
-
 <style>
 body { font-family: Arial; margin: 40px; max-width: 650px; }
 button { padding: 8px 16px; margin-top: 10px; }
@@ -13,71 +12,55 @@ input { padding: 5px; width: 100px; }
 </head>
 
 <body>
-
 <h2>Coin Flip Casino</h2>
-
-<p>
-You start with $0.50. Each round you may bet part of your balance.
-The game ends if your balance reaches $0 or $7.50.
-</p>
+<p>You start with $0.50. Bet part of your balance each round. The game ends if your balance reaches $0 or $7.50.</p>
 
 <h3>Balance: $<span id="balance">0.50</span></h3>
-
 <label>Bet Amount: $</label>
 <input type="number" id="bet" step="0.01" min="0.01">
-
 <br><br>
-
 <button id="headsBtn" onclick="play('Heads')">Bet Heads</button>
 <button id="tailsBtn" onclick="play('Tails')">Bet Tails</button>
 
 <div id="history"></div>
 
 <script>
-
 // ==========================
 // CONFIG
 // ==========================
-const WEB_APP_URL = https://script.google.com/macros/s/AKfycbwakPA3-8G8mQ-CXUr79PxQgKIXB2FIPHmhOSR-qfU3yioGvRwp9mo8r2RuEFbyhzTC/exec;
+const WEB_APP_URL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
 
 // ==========================
 // PARTICIPANT SETUP
 // ==========================
-
-// Persistent User ID
 let userid = localStorage.getItem("userid");
 if (!userid) {
     userid = crypto.randomUUID();
     localStorage.setItem("userid", userid);
 }
 
-// Random Condition Assignment
 let condition = localStorage.getItem("condition");
 if (!condition) {
     condition = Math.random() < 0.5 ? "treatment" : "control";
     localStorage.setItem("condition", condition);
 }
 
-// Persistent Game State
 let balance = parseFloat(localStorage.getItem("balance")) || 0.50;
 let roundNumber = parseInt(localStorage.getItem("roundNumber")) || 0;
 let gameOver = localStorage.getItem("gameOver") === "true";
 
-// Restore UI state
 document.getElementById("balance").innerText = balance.toFixed(2);
 if (gameOver) disableInputs();
-
 updateBetLimit();
 
-// Warn before refresh
+// Warn before leaving
 window.onbeforeunload = function() {
-    if (!gameOver) return "Your progress will be saved, but do not refresh during the study.";
+    if (!gameOver) return "Your progress will be saved. Refreshing may disrupt the game.";
 };
 
 // ==========================
-// CORE GAME LOGIC
+// GAME LOGIC
 // ==========================
-
 function getRandomBias() {
     const biases = [0.55, 0.60, 0.70];
     return biases[Math.floor(Math.random() * biases.length)];
@@ -111,13 +94,11 @@ function sendData(data) {
 }
 
 function play(choice) {
-
     if (gameOver) return;
 
     const betInput = document.getElementById("bet");
     const bet = parseFloat(betInput.value);
 
-    // ===== Server-side style validation =====
     if (isNaN(bet) || bet <= 0 || bet > balance) {
         alert("Invalid bet amount.");
         return;
@@ -128,32 +109,20 @@ function play(choice) {
     const bias = getRandomBias();
     const result = flipCoin(bias);
 
-    let outcome;
-
-    if (choice === result) {
-        balance += bet;
-        outcome = "win";
-    } else {
-        balance -= bet;
-        outcome = "loss";
-    }
-
-    balance = Math.round(balance * 100) / 100;
+    const outcome = (choice === result) ? "win" : "loss";
+    balance = (outcome === "win") ? balance + bet : balance - bet;
+    balance = Math.round(balance * 100)/100;
     const endBalance = balance;
 
-    // Update UI
     document.getElementById("balance").innerText = balance.toFixed(2);
     updateBetLimit();
     betInput.value = "";
 
-    // Save state
     localStorage.setItem("balance", balance);
     localStorage.setItem("roundNumber", roundNumber);
 
-    // Timestamp
     const timestamp = new Date().toISOString();
 
-    // Send row to server
     sendData({
         userid: userid,
         condition: condition,
@@ -167,35 +136,23 @@ function play(choice) {
         endowment_end: endBalance
     });
 
-    // Add to history
     const entry = document.createElement("div");
-    entry.innerHTML = "Round " + roundNumber +
-        " | " + outcome +
-        " | Balance: $" + endBalance.toFixed(2);
+    entry.innerHTML = "Round " + roundNumber + " | " + outcome + " | Balance: $" + endBalance.toFixed(2);
     document.getElementById("history").prepend(entry);
 
-    // ===== STOPPING RULES =====
-    if (balance <= 0) {
-        endGame("The game is over as your balance reached $0.");
-    }
-
-    if (balance >= 7.5) {
-        endGame("The game is over as your balance reached or exceeded $7.5.");
-    }
+    if (balance <= 0) endGame("The game is over as your balance reached $0.");
+    if (balance >= 7.5) endGame("The game is over as your balance reached or exceeded $7.50.");
 }
 
 function endGame(message) {
-
     gameOver = true;
     localStorage.setItem("gameOver", "true");
 
     disableInputs();
 
     const completionCode = generateCompletionCode();
-
     alert(message + "\n\nYour completion code is:\n" + completionCode);
 
-    // Final save row marking completion
     sendData({
         userid: userid,
         condition: condition,
@@ -210,7 +167,6 @@ function endGame(message) {
         completion_code: completionCode
     });
 }
-
 </script>
 </body>
 </html>
