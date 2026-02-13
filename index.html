@@ -18,8 +18,9 @@ input { padding: 5px; width: 100px; }
 <p>Probability of Heads: <span id="biasDisplay">-</span></p>
 <h3>Balance: $<span id="balance">0.50</span></h3>
     
-<label>Bet Amount: $</label>
-<input type="number" id="bet" step="0.01" min="0.01">
+<label>Bet Amount (in cents): </label>
+<input type="number" id="bet" step="1" min="1">
+    
 <br><br>
 <button id="headsBtn" onclick="play('Heads')">Bet Heads</button>
 <button id="tailsBtn" onclick="play('Tails')">Bet Tails</button>
