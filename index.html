@@ -30,7 +30,7 @@
     <button onclick="play('Heads')">Heads</button>
     <button onclick="play('Tails')">Tails</button>
 
-    <!-- Display current bias -->
+    <!-- Display current bias (shown for both conditions) -->
     <p>Current round probability of Heads: <span id="biasDisplay">-</span></p>
 
     <!-- History -->
@@ -44,7 +44,7 @@
         let roundNumber = parseInt(localStorage.getItem("roundNumber")) || 0;
         let gameOver = localStorage.getItem("gameOver") === "true";
         let currentBias = null;
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwakPA3-8G8mQ-CXUr79PxQgKIXB2FIPHmhOSR-qfU3yioGvRwp9mo8r2RuEFbyhzTC/exec"; // <-- Replace with your Apps Script URL
+        const WEB_APP_URL = "https://script.google.com/macros/s/YOUR_WEB_APP_URL_HERE/exec"; // <-- Replace with your Apps Script URL
         const userid = localStorage.getItem("userid") || ("user_" + Math.floor(Math.random()*1000000));
         localStorage.setItem("userid", userid);
 
@@ -110,7 +110,6 @@
         function play(choice) {
             if (gameOver) return;
 
-            // Determine bet amount in cents → convert to dollars
             const betInput = document.getElementById("bet");
             let bet = parseInt(betInput.value);
             if (isNaN(bet) || bet <= 0) {
