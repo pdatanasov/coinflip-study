@@ -100,7 +100,8 @@ function play(choice) {
     if (gameOver) return;
 
     const betInput = document.getElementById("bet");
-    const bet = parseFloat(betInput.value);
+    let bet = parseInt(betInput.value);  // in cents
+    bet = bet / 100;                     // convert to dollars
 
     if (isNaN(bet) || bet <= 0 || bet > balance) {
         alert("Invalid bet amount.");
