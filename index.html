@@ -1,44 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Coin Flip Casino Study</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      max-width: 600px;
-    }
-    button {
-      padding: 8px 16px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    input {
-      padding: 5px;
-      width: 80px;
-      <label>Bet Amount: $</label>
-      <input type="number" id="bet" step="0.01" min="0.01">
-    }
-    #history {
-      margin-top: 20px;
-      max-height: 200px;
-      overflow-y: auto;
-      border-top: 1px solid #ccc;
-      padding-top: 10px;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Coin Flip Study</title>
+
+<style>
+body { font-family: Arial; margin: 40px; max-width: 650px; }
+button { padding: 8px 16px; margin-top: 10px; }
+input { padding: 5px; width: 100px; }
+#history { margin-top: 20px; max-height: 200px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px; font-size: 14px; }
+</style>
 </head>
 
 <body>
 
-<h1>Coin Flip Casino</h1>
+<h2>Coin Flip Casino</h2>
 
 <p>
-You start with $0.50. Each round, you may bet part of your balance on Heads or Tails.
-One of three coins is randomly selected each round. Each coin has a different
-probability of landing Heads (0.55, 0.60, 0.70). Each coin is equally likely.
+You start with $0.50. Each round you may bet part of your balance.
+The game ends if your balance reaches $0 or $7.50.
 </p>
 
 <h3>Balance: $<span id="balance">0.50</span></h3>
@@ -54,113 +34,183 @@ probability of landing Heads (0.55, 0.60, 0.70). Each coin is equally likely.
 <div id="history"></div>
 
 <script>
-let balance = 0.50; 
-let gameOver = false;
-  
-window.onload = function() {
-  updateBetLimit();
+
+// ==========================
+// CONFIG
+// ==========================
+const WEB_APP_URL = https://script.google.com/macros/s/AKfycbwakPA3-8G8mQ-CXUr79PxQgKIXB2FIPHmhOSR-qfU3yioGvRwp9mo8r2RuEFbyhzTC/exec;
+
+// ==========================
+// PARTICIPANT SETUP
+// ==========================
+
+// Persistent User ID
+let userid = localStorage.getItem("userid");
+if (!userid) {
+    userid = crypto.randomUUID();
+    localStorage.setItem("userid", userid);
+}
+
+// Random Condition Assignment
+let condition = localStorage.getItem("condition");
+if (!condition) {
+    condition = Math.random() < 0.5 ? "treatment" : "control";
+    localStorage.setItem("condition", condition);
+}
+
+// Persistent Game State
+let balance = parseFloat(localStorage.getItem("balance")) || 0.50;
+let roundNumber = parseInt(localStorage.getItem("roundNumber")) || 0;
+let gameOver = localStorage.getItem("gameOver") === "true";
+
+// Restore UI state
+document.getElementById("balance").innerText = balance.toFixed(2);
+if (gameOver) disableInputs();
+
+updateBetLimit();
+
+// Warn before refresh
+window.onbeforeunload = function() {
+    if (!gameOver) return "Your progress will be saved, but do not refresh during the study.";
 };
-  
+
+// ==========================
+// CORE GAME LOGIC
+// ==========================
+
 function getRandomBias() {
-  const biases = [0.55, 0.60, 0.70];
-  const index = Math.floor(Math.random() * biases.length);
-  return biases[index];
+    const biases = [0.55, 0.60, 0.70];
+    return biases[Math.floor(Math.random() * biases.length)];
 }
 
 function flipCoin(bias) {
-  return Math.random() < bias ? "Heads" : "Tails";
+    return Math.random() < bias ? "Heads" : "Tails";
 }
-  
+
 function updateBetLimit() {
-  const betInput = document.getElementById("bet");
-  betInput.max = balance.toFixed(2);
+    document.getElementById("bet").max = balance.toFixed(2);
 }
-function endGame(message) {
-  gameOver = true;
-  document.getElementById("headsBtn").disabled = true;
-  document.getElementById("tailsBtn").disabled = true;
-  document.getElementById("bet").disabled = true;
-  alert(message);
+
+function disableInputs() {
+    document.getElementById("headsBtn").disabled = true;
+    document.getElementById("tailsBtn").disabled = true;
+    document.getElementById("bet").disabled = true;
+}
+
+function generateCompletionCode() {
+    return "CF-" + userid.substring(0,8).toUpperCase();
+}
+
+function sendData(data) {
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
 }
 
 function play(choice) {
 
-  if (gameOver) return;
+    if (gameOver) return;
 
-  const betInput = document.getElementById("bet");
-  const bet = parseFloat(betInput.value);
+    const betInput = document.getElementById("bet");
+    const bet = parseFloat(betInput.value);
 
-  if (isNaN(bet) || bet <= 0) {
-    alert("Enter a valid positive bet amount.");
-    return;
-  }
+    // ===== Server-side style validation =====
+    if (isNaN(bet) || bet <= 0 || bet > balance) {
+        alert("Invalid bet amount.");
+        return;
+    }
 
-  if (bet > balance) {
-    alert("You cannot bet more than your current balance.");
-    return;
-  }
+    roundNumber++;
+    const startBalance = balance;
+    const bias = getRandomBias();
+    const result = flipCoin(bias);
 
-  const bias = getRandomBias();
-  const result = flipCoin(bias);
+    let outcome;
 
-  if (choice === result) {
-    balance += bet;
-  } else {
-    balance -= bet;
-  }
+    if (choice === result) {
+        balance += bet;
+        outcome = "win";
+    } else {
+        balance -= bet;
+        outcome = "loss";
+    }
 
-  balance = Math.round(balance * 100) / 100;
+    balance = Math.round(balance * 100) / 100;
+    const endBalance = balance;
 
-  document.getElementById("balance").innerText = balance.toFixed(2);
+    // Update UI
+    document.getElementById("balance").innerText = balance.toFixed(2);
+    updateBetLimit();
+    betInput.value = "";
 
-  updateBetLimit();         // 🔹 Update allowed max bet
-  betInput.value = "";      // 🔹 Clear input field
+    // Save state
+    localStorage.setItem("balance", balance);
+    localStorage.setItem("roundNumber", roundNumber);
 
-  const history = document.getElementById("history");
-  const entry = document.createElement("div");
+    // Timestamp
+    const timestamp = new Date().toISOString();
 
-  entry.innerHTML =
-    "You chose: " + choice +
-    " | Result: " + result +
-    " | New Balance: $" + balance.toFixed(2);
+    // Send row to server
+    sendData({
+        userid: userid,
+        condition: condition,
+        round_number: roundNumber,
+        timestamp: timestamp,
+        bet_amount: bet,
+        choice: choice,
+        outcome: outcome,
+        probability_heads: bias,
+        endowment_start: startBalance,
+        endowment_end: endBalance
+    });
 
-  history.prepend(entry);
+    // Add to history
+    const entry = document.createElement("div");
+    entry.innerHTML = "Round " + roundNumber +
+        " | " + outcome +
+        " | Balance: $" + endBalance.toFixed(2);
+    document.getElementById("history").prepend(entry);
 
-  if (balance <= 0) {
-    endGame("The game is over as your balance reached $0.");
-  }
+    // ===== STOPPING RULES =====
+    if (balance <= 0) {
+        endGame("The game is over as your balance reached $0.");
+    }
 
-  if (balance >= 7.5) {
-    endGame("The game is over as your balance reached or exceeded $7.5.");
-  }
+    if (balance >= 7.5) {
+        endGame("The game is over as your balance reached or exceeded $7.5.");
+    }
 }
 
+function endGame(message) {
 
-  balance = Math.round(balance * 100) / 100; // avoid floating point drift
+    gameOver = true;
+    localStorage.setItem("gameOver", "true");
 
-  document.getElementById("balance").innerText = balance.toFixed(2);
+    disableInputs();
 
-  const history = document.getElementById("history");
-  const entry = document.createElement("div");
+    const completionCode = generateCompletionCode();
 
-  entry.innerHTML =
-    "Coin bias (P(Heads)) = " + bias +
-    " | You chose: " + choice +
-    " | Result: " + result +
-    " | New Balance: $" + balance.toFixed(2);
+    alert(message + "\n\nYour completion code is:\n" + completionCode);
 
-  history.prepend(entry);
-
-  // ---- STOPPING RULES ----
-  if (balance <= 0) {
-    endGame("The game is over as your balance reached $0.");
-  }
-
-  if (balance >= 7.5) {
-    endGame("The game is over as your balance reached or exceeded $7.5.");
-  }
+    // Final save row marking completion
+    sendData({
+        userid: userid,
+        condition: condition,
+        round_number: roundNumber,
+        timestamp: new Date().toISOString(),
+        bet_amount: "NA",
+        choice: "NA",
+        outcome: "completed",
+        probability_heads: "NA",
+        endowment_start: "NA",
+        endowment_end: balance,
+        completion_code: completionCode
+    });
 }
+
 </script>
-
 </body>
 </html>
