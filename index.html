@@ -17,6 +17,8 @@
     input {
       padding: 5px;
       width: 80px;
+      <label>Bet Amount: $</label>
+      <input type="number" id="bet" step="0.01" min="0.01">
     }
     #history {
       margin-top: 20px;
@@ -52,9 +54,13 @@ probability of landing Heads (0.55, 0.60, 0.70). Each coin is equally likely.
 <div id="history"></div>
 
 <script>
-let balance = 0.50;
+let balance = 0.50; 
 let gameOver = false;
-
+  
+window.onload = function() {
+  updateBetLimit();
+};
+  
 function getRandomBias() {
   const biases = [0.55, 0.60, 0.70];
   const index = Math.floor(Math.random() * biases.length);
@@ -64,7 +70,11 @@ function getRandomBias() {
 function flipCoin(bias) {
   return Math.random() < bias ? "Heads" : "Tails";
 }
-
+  
+function updateBetLimit() {
+  const betInput = document.getElementById("bet");
+  betInput.max = balance.toFixed(2);
+}
 function endGame(message) {
   gameOver = true;
   document.getElementById("headsBtn").disabled = true;
@@ -81,7 +91,7 @@ function play(choice) {
   const bet = parseFloat(betInput.value);
 
   if (isNaN(bet) || bet <= 0) {
-    alert("Enter a valid bet amount.");
+    alert("Enter a valid positive bet amount.");
     return;
   }
 
@@ -98,6 +108,33 @@ function play(choice) {
   } else {
     balance -= bet;
   }
+
+  balance = Math.round(balance * 100) / 100;
+
+  document.getElementById("balance").innerText = balance.toFixed(2);
+
+  updateBetLimit();         // 🔹 Update allowed max bet
+  betInput.value = "";      // 🔹 Clear input field
+
+  const history = document.getElementById("history");
+  const entry = document.createElement("div");
+
+  entry.innerHTML =
+    "You chose: " + choice +
+    " | Result: " + result +
+    " | New Balance: $" + balance.toFixed(2);
+
+  history.prepend(entry);
+
+  if (balance <= 0) {
+    endGame("The game is over as your balance reached $0.");
+  }
+
+  if (balance >= 7.5) {
+    endGame("The game is over as your balance reached or exceeded $7.5.");
+  }
+}
+
 
   balance = Math.round(balance * 100) / 100; // avoid floating point drift
 
